@@ -1,0 +1,94 @@
+2.Rename Method
+ //Код до рефакторингу
+ public bool CheckInputs(string name, string type, string symptoms)
+ {
+     return !string.IsNullOrWhiteSpace(name) && !string.IsNullOrWhiteSpace(type) && !string.IsNullOrWhiteSpace(symptoms);
+ }
+ //Код після рефакторингу
+ public bool ValidateDiseasesFields(string name, string type, string symptoms)
+ {
+     return !string.IsNullOrWhiteSpace(name) && !string.IsNullOrWhiteSpace(type) && !string.IsNullOrWhiteSpace(symptoms);
+ }
+
+4.Move Method:
+    //Код до рефакторингу
+    public class DiseaseManager
+    {
+        public bool CheckInputs(string name, string type, string symptoms)
+        {
+            return !string.IsNullOrWhiteSpace(name) && !string.IsNullOrWhiteSpace(type) && !string.IsNullOrWhiteSpace(symptoms);
+        }
+    }
+
+    public class AddDiseases
+    {
+        private readonly DiseaseManager diseaseManager = new DiseaseManager();
+
+        public void SaveDisease(string name, string type, string symptoms)
+        {
+            if (diseaseManager.CheckInputs(name, type, symptoms))
+            {
+                Console.WriteLine($"Захворювання збережено: {name}, тип: {type}, симптоми: {symptoms}");
+            }
+            else
+            {
+                Console.WriteLine("Перевірте правильність введених даних");
+            }
+        }
+    }
+    //Код після рефакторингу
+    public class AddDiseases
+    {
+
+        public bool ValidateDiseasesFields(string name, string type, string symptoms)
+        {
+            return !string.IsNullOrWhiteSpace(name) && !string.IsNullOrWhiteSpace(type) && !string.IsNullOrWhiteSpace(symptoms);
+        }
+        public void SaveDisease(string name, string type, string symptoms)
+        {
+            if (ValidateDiseasesFields(name, type, symptoms))
+            {
+                Console.WriteLine($"Захворювання збережено: {name}, тип: {type}, симптоми: {symptoms}");
+            }
+            else
+            {
+                Console.WriteLine("Перевірте правильність введених даних");
+            }
+        }
+    }
+
+7.Add Parameter
+    //Код до рефакторингу
+    public class ClientManager
+    {
+        private List<string> clientList = new List<string>();
+        public void SaveClient()
+        {
+            Console.WriteLine("Клієнт збережений.");
+        }
+
+        public void AddNewClient()
+        {
+            string clientName = "Марія Петрова";
+            string clientAge = "25 років";
+            string clientDiagnosis = "Тривожний розлад";
+
+            SaveClient();
+        }
+    }
+    //Код після рефакторингу
+    public class ClientManager
+    {
+        private List<string> clientList = new List<string>();
+        public void SaveClient(string clientName, string clientAge, string clientDiagnosis)
+        {
+            string clientInfo = $"Клієнт: {clientName}, Вік: {clientAge}, Діагноз: {clientDiagnosis}";
+            clientList.Add(clientInfo);
+            Console.WriteLine($"{clientInfo} збережено.");
+        }
+
+        public void AddNewClient(string clientName, string clientAge, string clientDiagnosis)
+        {
+            SaveClient(clientName, clientAge, clientDiagnosis);
+        }
+    }
