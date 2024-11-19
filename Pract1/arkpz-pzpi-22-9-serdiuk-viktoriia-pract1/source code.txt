@@ -1,0 +1,164 @@
+1.Стандартизація коду в C++
+//Код до рефакторингу
+int GCD(int x, int y) {
+  while (x != y) {
+    if (x > y) {x -= y;}
+      else {y -= x;}}
+  return x;
+}
+
+//Код після рефакторингу
+ 
+//Функція для обчислення найбільшого спільного дільника
+int calculateGCD(int numerator, int denominator) {
+  while (numerator != denominator) {
+    if (numerator > denominator) {
+      numerator -= denominator;
+    }else {
+	  denominator -= numerator;
+	}
+  }
+  return numerator;
+}
+
+2.Іменування змінних, функцій та класів 
+//Код до рефакторингу
+class numbers {
+private:
+  const int maxNumber = 50;
+  int Result;
+public:
+  int Sum(int x, int y) {
+    if (x > maxNumber || y > maxNumber) {
+      throw std::invalid_argument("Operand exceeds maximum value");
+    }
+    Result = x + y;
+    return Result;
+  }
+};
+
+//Код після рефакторингу
+class Calculator {
+private:
+  const int MAX_OPERAND = 50;
+  int resultSum;
+
+public:
+  int calculateSum(int firstNumber, int secondNumber) {
+    if (firstNumber > MAX_OPERAND || secondNumber > MAX_OPERAND) {
+	throw std::invalid_argument("Operand exceeds maximum value");
+	}
+	resultSum = firstNumber + secondNumber;
+	return resultSum;
+  }
+};
+
+3.Коментарі
+//Код до рефакторингу
+//Клас для чисел
+class Calculator {
+private:
+  int resultSum;
+
+public:
+  //Функція для додавання
+  int calculateSum(int firstNumber, int secondNumber) {
+    resultSum = firstNumber + secondNumber;
+	return resultSum;
+  }
+};
+
+//Код після рефакторингу
+//Клас для обчислення арифметичної операції (додавання)
+class Calculator {
+private:
+  //Змінна для збереження результату суми
+  int resultSum;
+
+public:
+  //Функція для обчислення суми двох чисел
+  int calculateSum(int firstNumber, int secondNumber) {
+    resultSum = firstNumber + secondNumber;
+	return resultSum;
+  }
+};
+
+4.форматування коду
+//Код до рефакторингу
+int calculateGCD ( int numerator, int denominator ) {
+while (numerator != denominator) {
+if (numerator > denominator) {
+numerator -= denominator;
+}
+else 
+{
+denominator -= numerator;
+}
+}
+return numerator;
+}
+
+int calculateLCM ( int firstNumber, int secondNumber ) 
+{
+int gcd = calculateGCD(firstNumber, secondNumber);
+return (firstNumber / gcd) * secondNumber;
+}
+
+//Код після рефакторингу
+int calculateGCD(int numerator, int denominator) {
+  while (numerator != denominator) {
+    if (numerator > denominator) {
+      numerator -= denominator;
+    }else {
+      denominator -= numerator;
+    }
+  }
+  return numerator;
+}
+
+int calculateLCM(int firstNumber, int secondNumber) {
+  int gcd = calculateGCD(firstNumber, secondNumber);
+  return (firstNumber / gcd) * secondNumber;
+}
+
+6.Локальні змінні
+//Код до рефакторингу
+int main() {
+    size_t i;
+    int number;
+    int remainder;
+    std::vector<int> numbers = { 1, 2, 3, 4, 5 };
+
+    for (i = 0; i < numbers.size(); i++) {
+        number = numbers[i];
+        remainder = number % 2;
+
+        if (remainder == 0) {
+            std::cout << number << " is even.\n";
+        }
+        else {
+            std::cout << number << " is odd.\n";
+        }
+    }
+
+    return 0;
+}
+
+//Код після рефакторингу
+int main() {
+    std::vector<int> numbers = { 1, 2, 3, 4, 5 };
+
+    for (size_t i = 0; i < numbers.size(); i++) {
+        int number = numbers[i];
+        int remainder = number % 2;
+
+        if (remainder == 0) {
+            std::cout << number << " is even.\n";
+        }
+        else {
+            std::cout << number << " is odd.\n";
+        }
+    }
+
+    return 0;
+}
