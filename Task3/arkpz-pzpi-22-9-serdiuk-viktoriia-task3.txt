@@ -1,0 +1,157 @@
+Міністерство освіти і науки України
+Харківський національний університет радіоелектроніки
+
+Кафедра програмної інженерії
+
+
+
+
+
+
+
+
+
+
+ЗВІТ
+з лабораторної роботи №3
+
+
+
+
+
+
+
+
+
+
+
+
+Виконала:                                                                                        Перевірив:               
+ст. гр. ПЗПІ-22-9                                                                             Дашенков Д. С.
+Сердюк В. С.
+
+
+
+
+
+
+
+
+
+
+Харків 2024
+ЛАБОРАТОРНА РОБОТА №3. РОЗРОБКА БІЗНЕС-ЛОГІКИ ТА ФУНКЦІЙ АДМІНІСТРУВАННЯ СЕРВЕРНОЇ ЧАСТИНИ ПРОГРАМНОЇ СИСТЕМИ
+
+Мета роботи: Розробити бізнес-логіку та функції адміністрування серверної частини програмної системи
+
+Завдання:
+1.	Розробити бізнес логіку серверної частини програмної системи.
+Бізнес логіка серверної частини програмної системи для управління кемпінгом:
+-	Перевірка доступності локацій перед створенням бронювання.
+-	Обчислення загальної вартості бронювання залежно від кількості днів та ціни локації.
+-	Обмеження використання ресурсів.
+-	Різні права доступу до функцій для адміністратора та звичайного користувача.
+-	Статистика споживання ресурсів.
+-	Управління користувачами, локаціями, ресурсами, бронюванням та відгуками через створення, читання, оновлення та видалення.
+Рисунок 1. – UML діаграма серверної частини системи.
+
+2.	Розробити функції адміністрування серверної частини програмної системи.
+3.	Створити програмну реалізацію бізнес логіки та функцій адміністрування серверної частини.
+Код функції авторизації:
+const login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const user = await User.findOne({ where: { email } });
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const isPassword = await bcrypt.compare(password, user.password);
+    if (!isPassword) {
+      return res.status(401).send("Incorrect email or password");
+    }
+
+    const token = jwt.sign(
+      { id: user.id, role: user.role },
+      "H78dre37fo#t1%87!650",
+      { expiresIn: "1h" }
+    );
+
+    return res.status(200).json({ token });
+  } catch (error) {
+    return res.status(500).send(error.message);
+  }
+};
+
+Код функції відображення статистики споживання ресурсів:
+const getResources = async (type, res) => {
+  try {
+    const resources = await Resource.findAll({
+      where: { type },
+      include: [
+        {
+          model: Location,
+          attributes: ["name"],
+        },
+      ],
+    });
+
+    if (resources && resources.length > 0) {
+      const total_quantity = resources.reduce(
+        (sum, resource) => sum + parseFloat(resource.consumption),
+        0
+      );
+
+      const data = resources.map((resource) => ({
+        location_name: resource.Location.name,
+        consumption: resource.consumption,
+      }));
+
+      return res.status(200).json({
+        total_quantity,
+        resources: data,
+      });
+    }
+    throw new Error("No data");
+  } catch (error) {
+    return res.status(500).send(error.message);
+  }
+};
+
+Код для обчислення загальної вартості бронювання:
+ const start = new Date(start_date);
+    const end = new Date(end_date);
+    const duration = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+    const totalPrice = duration * location.price;
+
+    const newBooking = await Booking.create({
+      ...req.body,
+      total_price: totalPrice,
+    });
+
+    await Location.update(
+      { availability: false },
+      { where: { id: location_id } }
+    );
+
+Код для перевірки використання ресурсів:
+const createResource = async (req, res) => {
+  try {
+    const { consumption, resource_limit } = req.body;
+    if (parseFloat(consumption) > parseFloat(resource_limit)) {
+      return res
+        .status(400)
+        .json({ message: "Consumption cannot exceed resource limit" });
+    }
+    const newResource = await Resource.create(req.body);
+    return res
+      .status(201)
+      .json({ message: "Resource created!", resource: newResource });
+  } catch (error) {
+    return res.status(500).send(error.message);
+  }
+};
+
+
+
