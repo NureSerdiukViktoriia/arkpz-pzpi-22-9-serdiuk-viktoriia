@@ -1,0 +1,550 @@
+Міністерство освіти і науки України
+Харківський національний університет радіоелектроніки
+
+Кафедра програмної інженерії
+
+
+
+
+
+
+
+
+
+
+ЗВІТ
+з лабораторної роботи №2
+
+
+
+
+
+
+
+
+
+
+
+
+Виконала:                                                                                        Перевірив:               
+ст. гр. ПЗПІ-22-9                                                                             Дашенков Д. С.
+Сердюк В. С.
+
+
+
+
+
+
+
+
+
+
+Харків 2024
+ЛАБОРАТОРНА РОБОТА №2. РОЗРОБКА БАЗИ ДАНИХ ДЛЯ СЕРВЕРНОЇ ЧАСТИНИ ПРОГРАМНОЇ СИСТЕМИ ТА ПРИКЛАДНОГО ПРОГРАМНОГО ІНТЕРФЕЙСУ (API).
+
+Мета роботи: Розробити базу даних для серверної частини програмної системи та прикладного програмного інтерфейсу.
+
+Завдання:
+1.	Розробити будову програмної системи.
+Опис технологій „Програмної системи для управління кемпінгом”:
+
+Front-end: 
+Мова: HTML, CSS.
+Фреймворк: React.js, для побудови компонентного, інтерактивного інтерфейсу користувача.
+Функціонал для клієнтів: перегляд доступних місць кемпінгу, відгуків та рейтингу. Можливість пошуку, сортування та фільтрації місць. 
+Функціонал для працівників кемпінгу: можливість перегляду зайнятих і доступних місць у реальному часі. Також перегляд відгуків клієнтів та моніторинг статистики щодо використання ресурсів кемпінгу, таких як: електрика та вода.
+
+Back-end: 
+Мова: JavaScript 
+Фреймворк: Node.js, Express.js (для створення REST API).
+ORM: Sequelize для інтеграції з базою даних MySQL Lite.
+Функціонал для клієнтів: бронювання місць та послуг, збереження особистої інформації у профілі, оплата. 
+Функціонал для працівників кемпінгу: управління бронюванням клієнтів, редагування інформації про місця та послуги, доступ до статистики з використання ресурсів кемпінгу.
+
+Mobile:
+Мова: JavaScript 
+Фреймворк:React Native (з використанням Expo)
+Функціонал для клієнтів: бронювання місць та послуг, оплата, перегляд зайнятих та вільних місць у режимі реального часу. 
+Функціонал для працівників кемпінгу: перегляд зайнятих та доступних зон кемпінгу, управління бронюванням, керування ресурсами, отримання сповіщень про перевищення використання ресурсів.
+
+IoT: 
+Сенсори для моніторингу про зайнятість місць, що встановлюються на кожному кемпінговому місці, також контроль споживання електрики чи води. 
+
+2.	Створити UML діаграму прецедентів для серверної частини системи.
+Рисунок 1. – Діаграма прецедентів для серверної частини системи.
+
+3.	Створити ER діаграму даних.
+ 
+Рисунок 2. - ER діаграма даних.
+
+4.	Розробити базу даних (БД) програмної системи.
+Модель Booking:
+Зберігає інформацію про бронювання, включаючи дати бронювання, загальну вартість, статус оплати і дату оплати.
+const { DataTypes } = require("sequelize");
+const sequelize = require("../db");
+
+const Booking = sequelize.define("Booking", {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true,
+  },
+  start_date: {
+    type: DataTypes.DATE,
+    allowNull: false,
+  },
+  end_date: {
+    type: DataTypes.DATE,
+    allowNull: false,
+  },
+  total_price: {
+    type: DataTypes.FLOAT,
+    allowNull: false,
+  },
+  payment_status: {
+    type: DataTypes.TEXT,
+    allowNull: false,
+    validate: {
+      isIn: [['paid', 'pending', 'failed']],
+    },
+  },
+  payment_date: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
+});
+
+Booking.associate = (models) => {
+  Booking.belongsTo(models.User, {
+    foreignKey: {
+      name: "user_id",
+      allowNull: false,
+    },
+    onDelete: "CASCADE",
+  });
+  Booking.belongsTo(models.Location, {
+    foreignKey: {
+      name: "location_id",
+      allowNull: false,
+    },
+    onDelete: "CASCADE",
+  });
+};
+
+module.exports = Booking;
+
+Модель Location:
+Описує місця кемпінгу, включаючи назву, тип, ціну, опис, місткість і доступність.
+const { DataTypes } = require("sequelize");
+const sequelize = require("../db");
+
+const Location = sequelize.define("Location", {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true,
+  },
+  name: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
+  type: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
+  price: {
+    type: DataTypes.FLOAT,
+    allowNull: false,
+  },
+  description: {
+    type: DataTypes.TEXT,
+    allowNull: false,
+  },
+  max_capacity: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+  },
+  availability: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true,
+  },
+});
+
+module.exports = Location;
+
+Модель Resource:
+Відслідковує споживання ресурсів електроенергії та води на кожному місці.
+const { DataTypes } = require("sequelize");
+const sequelize = require("../db");
+
+const Resource = sequelize.define("Resource", {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true,
+  },
+  type: {
+    type: DataTypes.TEXT("electricity", "water"),
+    allowNull: false,
+    validate: {
+      isIn: [['electricity', 'water']],
+    },
+  },
+  consumption: {
+    type: DataTypes.FLOAT,
+    allowNull: false,
+    validate: {
+      min: 0,
+    },
+  },
+  resource_limit: {
+    type: DataTypes.FLOAT,
+    allowNull: false,
+    validate: {
+      min: 0,
+    },
+  },
+});
+
+Resource.associate = (models) => {
+  Resource.belongsTo(models.Location, {
+    foreignKey: {
+      name: "location_id",
+      allowNull: false,
+    },
+    onDelete: "CASCADE",
+  });
+};
+
+module.exports = Resource;
+
+Модель Review:
+Зберігає відгуки клієнтів про місця кемпінгу, включаючи дату, рейтинг і текст повідомлення.
+const { DataTypes } = require("sequelize");
+const sequelize = require("../db");
+
+const Review = sequelize.define("Review", {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true,
+  },
+  date: {
+    type: DataTypes.DATE,
+    allowNull: false,
+  },
+  rating: {
+    type: DataTypes.FLOAT,
+    allowNull: false,
+    validate: {
+      min: 1,
+      max: 5,
+    },
+  },
+  message: {
+    type: DataTypes.TEXT,
+    allowNull: false,
+  },
+});
+
+Review.associate = (models) => {
+  Review.belongsTo(models.User, {
+    foreignKey: {
+      name: "user_id",
+      allowNull: false,
+    },
+    onDelete: "CASCADE",
+  });
+  Review.belongsTo(models.Location, {
+    foreignKey: {
+      name: "location_id",
+      allowNull: false,
+    },
+    onDelete: "CASCADE",
+  });
+};
+
+module.exports = Review;
+
+Модель User: 
+Керує інформацією про користувачів (адміністраторів і клієнтів), включаючи ім'я, контактні дані, роль та хешований пароль.
+const { DataTypes } = require("sequelize");
+const sequelize = require("../db");
+const bcrypt = require("bcryptjs");
+
+const User = sequelize.define("User", {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true,
+  },
+  first_name: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
+  last_name: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
+  email: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    unique: true,
+  },
+  phone_number: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    validate: {
+      is: /^[+]?[0-9]{10,15}$/,
+    },
+  },
+  password: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
+  role: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    validate: {
+      isIn: [["admin", "user"]],
+    },
+  },
+});
+
+User.beforeCreate(async (user) => {
+  const salt = await bcrypt.genSalt(10);
+  user.password = await bcrypt.hash(user.password, salt);
+});
+module.exports = User;
+
+ 
+Рисунок 3. – Таблиці бази даних
+
+5.	Створити діаграму структури БД.
+ 
+Рисунок 4. – Діаграма структури БД
+
+6.	Розробити функції роботи з БД (ORM).
+Розроблені функції: 
+-	Можливість створення бронювання, локації, ресурсів, відгуків та користувача.
+-	Можливість оновлення бронювання, локації, ресурсів, відгуків та користувача.
+-	Можливість видалення бронювання, локації, ресурсу, відгуку та користувача.
+-	Можливість перегляду всіх бронювань, всіх локацій, всіх ресурсів, всіх відгуків та користувача за id.
+Код функції створення клієнта: 
+const createUser = async (req, res) => {
+  try {
+    const newUser = await User.create(req.body);
+    return res.status(201).json({ message: "User created!", user: newUser });
+  } catch (error) {
+    return res.status(500).send(error.message);
+  }
+};
+
+Код функції перегляду всіх бронювань: 
+const getAllBookings = async (req, res) => {
+  try {
+    const bookings = await Booking.findAll({});
+    if (bookings && bookings.length > 0) {
+      return res.status(200).json(bookings);
+    } else {
+      return res.status(404).send("Bookings do not exist");
+    }
+  } catch (error) {
+    return res.status(500).send(error.message);
+  }
+};
+
+Код функції оновлення відгуку: 
+const updateReview = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [updated] = await Review.update(req.body, {
+      where: { id: id },
+    });
+    if (updated) {
+      const updatedReview = await Review.findOne({ where: { id: id } });
+      return res
+        .status(200)
+        .json({ message: "Review updated!", review: updatedReview });
+    }
+    throw new Error("Review not found");
+  } catch (error) {
+    return res.status(500).send(error.message);
+  }
+};
+
+Код функції видалення відгуку: 
+const deleteResource = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deleted = await Resource.destroy({
+      where: { id: id },
+    });
+    if (deleted) {
+      return res.status(204).json();
+    }
+    throw new Error("Resource not found");
+  } catch (error) {
+    return res.status(500).send(error.message);
+  }
+};
+
+7.	Розробити API (REST) для взаємодії серверної частини з клієнтами.
+API для бронювання:
+const express = require("express");
+const bookingController = require("../controllers/bookingController");
+const router = express.Router();
+router.post("/", bookingController.createBooking);
+router.get("/", bookingController.getAllBookings);
+router.put("/:id", bookingController.updateBooking);
+router.delete("/:id", bookingController.deleteBooking);
+module.exports = router;
+
+API для локацій:
+const express = require("express");
+const locationController = require("../controllers/locationController");
+const router = express.Router();
+router.post("/", locationController.createLocation);
+router.get("/", locationController.getAllLocations);
+router.put("/:id", locationController.updateLocation);
+router.delete("/:id", locationController.deleteLocation);
+module.exports = router;
+
+API для ресурсу:
+const express = require("express");
+const resourceController = require("../controllers/resourceController");
+const router = express.Router();
+router.post("/", resourceController.createResource);
+router.get("/", resourceController.getAllResources);
+router.put("/:id", resourceController.updateResource);
+router.delete("/:id", resourceController.deleteResource);
+module.exports = router;
+
+API для відгуку:
+const express = require("express");
+const reviewController = require("../controllers/reviewController");
+const router = express.Router();
+router.post("/", reviewController.createReview);
+router.get("/", reviewController.getAllReviews);
+router.put("/:id", reviewController.updateReview);
+router.delete("/:id", reviewController.deleteReview);
+module.exports = router;
+
+API для користувача:
+const express = require("express");
+const userController = require("../controllers/userController");
+const router = express.Router();
+router.post("/", userController.createUser);
+router.get("/:id", userController.getUserById);
+router.put("/:id", userController.updateUser);
+router.delete("/:id", userController.deleteUser);
+module.exports = router;
+
+
+8.	Створити специфікацію розробленого API. 
+9.	Створити програмну реалізацію розробленого API та функцій роботи з БД.
+10.	Перевірити роботу створеного програмного коду серверної частини системи.
+API для користувача:
+Створення користувача:
+URL: /api/users
+Метод: POST
+ 
+
+Перегляд користувача:
+URL: /api/users/:id
+Метод: GET
+ 
+
+Оновлення користувача:
+URL: /api/users/:id
+Метод: PUT
+ 
+
+Видалення користувача:
+URL: /api/users/:id
+Метод: DELETE
+ 
+API для локацій:
+Створення локації:
+URL: /api/locations
+Метод: POST
+ 
+
+Перегляд локації:
+URL: /api/locations
+Метод: GET
+ 
+
+Оновлення локації:
+URL: /api/locations/:id
+Метод: PUT
+ 
+Видалення локації:
+URL: /api/locations/:id
+Метод: DELETE
+ 
+
+API для бронювання:
+Створення бронювання:
+URL: /api/bookings
+Метод: POST
+ 
+
+Перегляд бронювання:
+URL: /api/bookings
+Метод: GET
+ 
+
+Оновлення бронювання:
+URL: /api/bookings/:id
+Метод: PUT
+ 
+
+Видалення бронювання:
+URL: /api/bookings/:id
+Метод: DELETE
+ 
+
+API для ресурсу:
+Створення ресурсу:
+URL: /api/resources
+Метод: POST
+ 
+
+Перегляд ресурсу:
+URL: /api/resources
+Метод: GET
+ 
+
+Оновлення ресурсу:
+URL: /api/resources/:id
+Метод: PUT
+ 
+
+Видалення ресурсу:
+URL: /api/resources/:id
+Метод: DELETE
+ 
+
+API для відгуку:
+Створення відгуку:
+URL: /api/reviews
+Метод: POST
+ 
+
+Перегляд відгуку:
+URL: /api/reviews
+Метод: GET
+ 
+
+Оновлення відгуку:
+URL: /api/reviews/:id
+Метод: PUT
+ 
+
+Видалення відгуку:
+URL: /api/users/:id
+Метод: DELETE
+ 
+
+
