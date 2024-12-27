@@ -1,0 +1,181 @@
+Міністерство освіти і науки України
+Харківський національний університет радіоелектроніки
+
+Кафедра програмної інженерії
+
+
+
+
+
+
+
+
+
+
+ЗВІТ
+з лабораторної роботи №4
+
+
+
+
+
+
+
+
+
+
+
+
+Виконала:                                                                                        Перевірив:               
+ст. гр. ПЗПІ-22-9                                                                             Дашенков Д. С.
+Сердюк В. С.
+
+
+
+
+
+
+
+
+
+
+Харків 2024
+ЛАБОРАТОРНА РОБОТА №4. РОЗРОБКА IoT КЛІЄНТА (БІЗНЕС-ЛОГІКИ ТА ФУНКЦІЙ НАЛАШТУВАННЯ)
+Мета роботи: Розробити програмне забезпечення для IoT або SmartDevice пристрою, створеного на базі будь-якої поширеної на сьогодні платформи, придатної для реалізації вбудованих систем (Embedded System).
+
+1.	Розробити будову програмного забезпечення ІоТ клієнта.
+Функції ІоТ клієнта:
+Моніторинг зайнятості місць: Вимірювання наявності людини за допомогою датчика.
+Відстеження споживання електрики та води: Зчитування даних з аналогових датчиків, що вимірюють споживання води та електрики. Функція для обробки даних і визначення, чи перевищено ліміти.
+2.	Створити UML діаграму прецедентів для ІоТ клієнта.  
+3.	Створити діаграму діяльності для ІоТ клієнта.
+ 
+Рисунок 1. – Діаграма прецедентів для для ІоТ клієнта.
+
+4.	Розробити бізнес логіку та функції налаштування ІоТ клієнта.
+Бізнес логіка: 
+Моніторинг стану ресурсів: 
+- ІоТ клієнт отримує дані від датчиків електрики та води в реальному часі.
+- Ці дані регулярно перевіряються та порівнюються з попередньо встановленими лімітами споживання.
+- Якщо рівень споживання перевищує встановлений ліміт, система генерує попередження.
+Оповіщення про перевищення лімітів:
+- У разі перевищення ліміту споживання електрики чи води, система автоматично надсилає сповіщення.
+- Сповіщення надсилається на електронну пошту адміністратора або користувача, щоб попередити про проблему. 
+Обробка та зберігання даних:
+- Усі зібрані дані з датчиків (електрика, вода, зайнятість місць) зберігаються в базі даних.
+- Дані використовуються для надання користувачеві статистичних звітів щодо споживання ресурсів або для виявлення помилок в роботі системи.
+Функції налаштування:
+Налаштування лімітів для споживання електрики та води:
+- Адміністратор може налаштувати максимальні ліміти споживання для кожного ресурсу (електрика і вода).
+- Система буде порівнювати поточні значення з встановленими лімітами і визначатиме, чи потрібно надсилати сповіщення.
+- ІоТ клієнт може визначити порогові значення для моніторингу наявності людини на місці.
+
+5. Створити програмну реалізацію бізнес логіки та функцій налаштування ІоТ клієнта.
+ 
+Рисунок 2. - IOT пристрій
+
+Код для IOT пристрою:
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+LiquidCrystal_I2C lcd(32, 16, 2);
+
+const int power = A0;
+const int water = A1;
+const int trig = 9;
+const int echo = 10;
+int powerValue = 0;
+int waterValue = 0;
+
+int powerLimit = 500;  
+int waterLimit = 100;
+
+long distance = 0;
+
+void setup() {
+  lcd.init();
+  lcd.backlight();
+  pinMode(trig, OUTPUT);
+  pinMode(echo, INPUT);
+}
+
+void loop() {
+  powerValue = analogRead(power);
+  waterValue = analogRead(water);
+  int displayPower = map(powerValue, 0, 1023, 0, 1000);
+  int displayWater = map(waterValue, 0, 1023, 0, 1000);
+  lcd.clear();
+
+  if (checkPresence()) {
+    lcd.setCursor(0, 0);
+    lcd.print("Human detected!");
+  } else {
+    lcd.setCursor(0, 0);
+    lcd.print("Human not detected");
+  }
+
+  delay(2000);
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Power: ");
+  lcd.print(displayPower);
+  lcd.print(" W");
+  lcd.setCursor(0, 1);
+  if (displayPower > powerLimit) {
+    lcd.print("Limit exceeded!");
+  } else {
+    lcd.print("Within the limit");
+  }
+  delay(2000);
+
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Water: ");
+  lcd.print(displayWater);
+  lcd.print(" L");
+
+  lcd.setCursor(0, 1);
+  if (displayWater > waterLimit) {
+    lcd.print("Limit exceeded!");
+  } else {
+    lcd.print("Within the limit");
+  }
+
+  delay(2000);
+
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Distance:");
+  distance = measureDistance();
+  lcd.setCursor(0, 1);
+  lcd.print(distance);
+  lcd.print(" cm");
+  
+  delay(2000);
+}
+
+long measureDistance() {
+  long duration;
+  
+  digitalWrite(trig, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trig, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trig, LOW);
+
+  duration = pulseIn(echo, HIGH);
+  long distance = (duration / 2) / 29.1;
+
+  if (distance < 1 || distance > 400) {
+    return 0;
+  }
+  return distance;
+}
+
+bool checkPresence() {
+  distance = measureDistance();
+  if (distance < 1 || distance > 100) {
+    return false;
+  }
+  return true;
+}
