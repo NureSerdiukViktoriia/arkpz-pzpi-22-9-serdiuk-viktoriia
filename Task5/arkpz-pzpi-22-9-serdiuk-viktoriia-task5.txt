@@ -1,0 +1,256 @@
+Міністерство освіти і науки України
+Харківський національний університет радіоелектроніки
+
+Кафедра програмної інженерії
+
+
+
+
+
+
+
+
+
+
+ЗВІТ
+з лабораторної роботи №5
+
+
+
+
+
+
+
+
+
+
+
+
+Виконала:                                                                                        Перевірив:               
+ст. гр. ПЗПІ-22-9                                                                             Дашенков Д. С.
+Сердюк В. С.
+
+
+
+
+
+
+
+
+
+
+Харків 2024
+ЛАБОРАТОРНА РОБОТА №5. РОЗГОРТАННЯ ПРОГРАМНОЇ
+СИСТЕМИ ТА ДЕМОНСТРАЦІЯ ЇЇ РОБОТИ
+
+Мета роботи: розгорнути програмну систему та продемонструвати її роботу.
+
+Головна функціональність клієнтів: 
+MF-1: Бронювання місць; 
+MF-2: Можливість перегляду та додавання нових відгуків; 
+MF-3: Можливість моніторингу зайнятості місць у реальному часі; 
+MF-4: Перегляд доступних локацій.
+Головна функціональність працівників кемпінгу: 
+MF-1: Можливість моніторингу зайнятості місць клієнтами у реальному часі; 
+MF-2: Перегляд збережених відгуків клієнтів; 
+MF-3: Можливість перегляду статистики щодо використання ресурсів кемпінгу, таких як: електрика та вода; 
+MF-4: Управління бронюванням клієнтів; 
+MF-5: Редагування інформації про місця; 
+MF-6: Керування ресурсами кемпінгу, таких як: електрика та вода; 
+
+Програмний код серверної частини системи:
+Створення користувача:
+URL: /api/users
+Метод: POST
+ 
+
+Перегляд користувача:
+URL: /api/users/:id
+Метод: GET
+ 
+
+Оновлення користувача:
+URL: /api/users/:id
+Метод: PUT
+ 
+
+Видалення користувача:
+URL: /api/users/:id
+Метод: DELETE
+ 
+Створення локації:
+URL: /api/locations
+Метод: POST
+ 
+
+Перегляд локації:
+URL: /api/locations
+Метод: GET
+ 
+
+Оновлення локації:
+URL: /api/locations/:id
+Метод: PUT
+ 
+Видалення локації:
+URL: /api/locations/:id
+Метод: DELETE
+ 
+
+Створення бронювання:
+URL: /api/bookings
+Метод: POST
+ 
+
+Перегляд бронювання:
+URL: /api/bookings
+Метод: GET
+ 
+
+Оновлення бронювання:
+URL: /api/bookings/:id
+Метод: PUT
+ 
+
+Видалення бронювання:
+URL: /api/bookings/:id
+Метод: DELETE
+ 
+
+Створення ресурсу:
+URL: /api/resources
+Метод: POST
+ 
+
+Перегляд ресурсу:
+URL: /api/resources
+Метод: GET
+ 
+
+Оновлення ресурсу:
+URL: /api/resources/:id
+Метод: PUT
+ 
+
+Видалення ресурсу:
+URL: /api/resources/:id
+Метод: DELETE
+ 
+
+Створення відгуку:
+URL: /api/reviews
+Метод: POST
+ 
+
+Перегляд відгуку:
+URL: /api/reviews
+Метод: GET
+ 
+
+Оновлення відгуку:
+URL: /api/reviews/:id
+Метод: PUT
+ 
+
+Видалення відгуку:
+URL: /api/users/:id
+Метод: DELETE
+ 
+
+Функція авторизації:
+const login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const user = await User.findOne({ where: { email } });
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const isPassword = await bcrypt.compare(password, user.password);
+    if (!isPassword) {
+      return res.status(401).send("Incorrect email or password");
+    }
+
+    const token = jwt.sign(
+      { id: user.id, role: user.role },
+      "H78dre37fo#t1%87!650",
+      { expiresIn: "1h" }
+    );
+
+    return res.status(200).json({ token });
+  } catch (error) {
+    return res.status(500).send(error.message);
+  }
+};
+
+Функція відображення статистики споживання ресурсів:
+const getResources = async (type, res) => {
+  try {
+    const resources = await Resource.findAll({
+      where: { type },
+      include: [
+        {
+          model: Location,
+          attributes: ["name"],
+        },
+      ],
+    });
+
+    if (resources && resources.length > 0) {
+      const total_quantity = resources.reduce(
+        (sum, resource) => sum + parseFloat(resource.consumption),
+        0
+      );
+
+      const data = resources.map((resource) => ({
+        location_name: resource.Location.name,
+        consumption: resource.consumption,
+      }));
+
+      return res.status(200).json({
+        total_quantity,
+        resources: data,
+      });
+    }
+    throw new Error("No data");
+  } catch (error) {
+    return res.status(500).send(error.message);
+  }
+};
+
+Обчислення загальної вартості бронювання:
+ const start = new Date(start_date);
+    const end = new Date(end_date);
+    const duration = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+    const totalPrice = duration * location.price;
+
+    const newBooking = await Booking.create({
+      ...req.body,
+      total_price: totalPrice,
+    });
+
+    await Location.update(
+      { availability: false },
+      { where: { id: location_id } }
+    );
+
+Перевірка використання ресурсів:
+const createResource = async (req, res) => {
+  try {
+    const { consumption, resource_limit } = req.body;
+    if (parseFloat(consumption) > parseFloat(resource_limit)) {
+      return res
+        .status(400)
+        .json({ message: "Consumption cannot exceed resource limit" });
+    }
+    const newResource = await Resource.create(req.body);
+    return res
+      .status(201)
+      .json({ message: "Resource created!", resource: newResource });
+  } catch (error) {
+    return res.status(500).send(error.message);
+  }
+};
+
+
